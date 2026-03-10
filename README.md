@@ -63,12 +63,44 @@ npm run dev
 
 ## API Endpoints
 
+All endpoints are served under the `/api` prefix.
+
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/health` | Server health check |
-| GET | `/info` | Vector store info |
-| GET | `/search?query=...` | Semantic document search |
-| POST | `/chat` | RAG-powered Q&A |
+| GET | `/api/health` | Railway health check — returns `{"status": "ok"}` |
+| GET | `/api/info` | Vector store metadata |
+| GET | `/api/search?query=...` | Semantic document search |
+| POST | `/api/chat` | RAG-powered Q&A |
+
+### Response Format
+
+```json
+// /api/health (flat)
+{"status": "ok", "vector_store_loaded": true, ...}
+
+// All other endpoints (envelope)
+{"success": true, "data": { ... }}
+```
+
+## Deployment
+
+### Backend → Railway
+1. Connect your GitHub repo to Railway
+2. Set environment variables in Railway dashboard (see `.env.example`)
+3. Railway auto-runs: `uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT`
+
+### Frontend → Vercel
+1. Set `VITE_BACKEND_URL=https://your-backend.railway.app` in Vercel env vars
+2. Deploy the `frontend/` directory
+
+### Environment Variables
+
+| Variable | Where | Description |
+|----------|-------|-------------|
+| `BACKEND_URL` | Railway | Your Railway backend URL |
+| `FRONTEND_URL` | Railway | Your Vercel frontend URL (for CORS) |
+| `PORT` | Railway | Set automatically by Railway |
+| `VITE_BACKEND_URL` | Vercel | Your Railway backend URL |
 
 ## Tech Stack
 

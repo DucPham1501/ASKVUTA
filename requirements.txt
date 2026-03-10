@@ -28,3 +28,4 @@ accelerate>=0.31.0                 # device_map, mixed precision
 # --- Utilities ---
 numpy>=1.26.0
 tiktoken>=0.7.0                    # Tokenizer (dùng trong build script)
+python-dotenv>=1.0.0               # Load .env file

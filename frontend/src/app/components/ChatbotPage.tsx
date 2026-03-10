@@ -2,7 +2,11 @@ import { useState, useRef, useEffect } from "react";
 import { Send, Mic, Waves, Sparkles, AlertCircle, BookOpen } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
-const API_BASE = "/api";
+// Dev: VITE_BACKEND_URL not set → "/api" (proxied to localhost:8000/api by Vite)
+// Prod: VITE_BACKEND_URL = "https://your-backend.railway.app" → calls backend directly
+const API_BASE = import.meta.env.VITE_BACKEND_URL
+  ? `${import.meta.env.VITE_BACKEND_URL}/api`
+  : "/api";
 
 // Scores là raw inner product từ FAISS IndexFlatIP
 function formatScore(score: number): string {
@@ -98,7 +102,9 @@ export function ChatbotPage() {
         throw new Error(errorData.detail || `Lỗi máy chủ (${response.status})`);
       }
 
-      const data = await response.json();
+      const json = await response.json();
+      // Backend wraps payload: { success: true, data: { answer, sources, ... } }
+      const data = json.data ?? json;
 
       const botMessage: Message = {
         id: Date.now(),

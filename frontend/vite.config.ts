@@ -22,10 +22,11 @@ export default defineConfig({
 
   server: {
     proxy: {
+      // Forwards /api/* → http://localhost:8000/api/*
+      // Backend now serves all routes under /api, so no rewrite needed.
       '/api': {
         target: 'http://localhost:8000',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
       },
     },
   },

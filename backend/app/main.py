@@ -6,15 +6,17 @@ backend/app/main.py
 Chịu trách nhiệm:
   - Tạo FastAPI app instance.
   - Đăng ký startup/shutdown events (tải vector store và LLM).
-  - Mount API routes.
-  - Cấu hình CORS, logging, và metadata Swagger UI.
+  - Mount API routes dưới prefix /api.
+  - Cấu hình CORS (dùng FRONTEND_URL từ môi trường).
+  - Cấu hình logging và metadata Swagger UI.
 
 Khởi động server:
-    # Từ project root:
+    # Railway (từ project root):
+    uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
+    # Development (từ project root):
     python backend/app/main.py
-    # Hoặc từ thư mục backend/:
+    # Development (từ backend/):
     uvicorn app.main:app --reload
-    uvicorn app.main:app --host 0.0.0.0 --port 8000
 """
 
 import logging
@@ -122,20 +124,27 @@ app = FastAPI(
 )
 
 # ---------------------------------------------------------------------------
-# CORS Middleware – cho phép frontend gọi API từ trình duyệt
+# CORS Middleware – cho phép frontend (Vercel) gọi API từ trình duyệt
 # ---------------------------------------------------------------------------
+# FRONTEND_URL = "*"                          → cho phép tất cả (dev)
+# FRONTEND_URL = "https://app.vercel.app"    → chỉ cho phép domain Vercel (prod)
+_cors_origins: list[str] = (
+    ["*"] if settings.FRONTEND_URL == "*"
+    else [settings.FRONTEND_URL, "http://localhost:5173"]
+)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],          # Trong production: giới hạn domain cụ thể
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # ---------------------------------------------------------------------------
-# Mount routes
+# Mount routes – tất cả endpoints nằm dưới /api
 # ---------------------------------------------------------------------------
-app.include_router(router, prefix="")
+app.include_router(router, prefix="/api")
 
 # ---------------------------------------------------------------------------
 # Root endpoint
@@ -150,12 +159,12 @@ async def root() -> JSONResponse:
             "version":     settings.APP_VERSION,
             "description": settings.APP_DESCRIPTION,
             "docs":        "/docs",
-            "health":      "/health",
+            "health":      "/api/health",
             "endpoints": {
-                "search": "GET  /search?query=<câu hỏi>&top_k=5",
-                "chat":   "POST /chat  body: {question: string}",
-                "health": "GET  /health",
-                "info":   "GET  /info",
+                "search": "GET  /api/search?query=<câu hỏi>&top_k=5",
+                "chat":   "POST /api/chat  body: {question: string}",
+                "health": "GET  /api/health",
+                "info":   "GET  /api/info",
             },
         }
     )
@@ -167,4 +176,9 @@ async def root() -> JSONResponse:
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run(
+        "app.main:app",
+        host="0.0.0.0",
+        port=settings.PORT,
+        reload=settings.DEBUG,
+    )

@@ -30,40 +30,42 @@ class Settings(BaseSettings):
     )
     DEBUG: bool = False
 
+    # --- Deployment URLs ---
+    # URL của backend (Railway). Dùng trong responses và docs.
+    BACKEND_URL: str = "http://localhost:8000"
+    # URL của frontend (Vercel). Dùng để cấu hình CORS.
+    # Đặt thành "*" để cho phép tất cả origins (development).
+    FRONTEND_URL: str = "*"
+    # Port mà uvicorn lắng nghe – Railway tự set biến PORT.
+    PORT: int = 8000
+
     # --- Vector store ---
     # Đường dẫn tuyệt đối đến file pickle chứa FAISS index
     PKL_PATH: str = _os.path.join(_PROJECT_ROOT, "data", "embeddings", "vungtau_knowledge.pkl")
 
     # --- Embedding model (phải khớp với model dùng khi build index) ---
-    # Dùng như fallback khi VectorStore tải format pickle cũ
     EMBEDDING_MODEL: str = "paraphrase-multilingual-mpnet-base-v2"
 
     # --- LLM: Qwen2.5-0.5B-Instruct (chạy local) ---
     LLM_MODEL_ID: str = "Qwen/Qwen2.5-0.5B-Instruct"
 
     # Số token tối đa mà LLM sinh ra
-    # Giữ thấp để tránh vòng lặp hallucination trên model 0.5B
     LLM_MAX_NEW_TOKENS: int = 256
 
-    # Nhiệt độ sinh văn bản (thấp = chính xác hơn, tránh hallucination)
+    # Nhiệt độ sinh văn bản
     LLM_TEMPERATURE: float = 0.2
 
     # Top-p sampling
     LLM_TOP_P: float = 0.85
 
     # --- Tìm kiếm ---
-    # Số lượng chunk trả về mặc định cho /search
     SEARCH_TOP_K: int = 5
-
-    # Số lượng chunk dùng để xây dựng context cho RAG
-    # Giữ thấp: 3 chunk × 400 ký tự = ~1200 ký tự – vừa đủ cho Qwen-0.5B
     RAG_TOP_K: int = 3
-
-    # Số ký tự tối đa mỗi chunk đưa vào context (cắt bớt nếu dài hơn)
     MAX_CHUNK_CHARS: int = 400
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        # Dùng đường dẫn tuyệt đối để tìm .env không phụ thuộc vào CWD
+        env_file=_os.path.join(_PROJECT_ROOT, ".env"),
         env_file_encoding="utf-8",
         case_sensitive=True,
     )

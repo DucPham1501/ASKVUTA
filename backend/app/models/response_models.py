@@ -3,9 +3,26 @@ app/models/response_models.py
 ------------------------------
 Pydantic models cho response trả về từ các API endpoint.
 Đảm bảo cấu trúc JSON nhất quán và có schema rõ ràng trong Swagger UI.
+
+Tất cả endpoint (trừ /api/health) trả về dạng envelope:
+    {"success": true, "data": <payload>}
 """
 
+from typing import Generic, TypeVar
+
 from pydantic import BaseModel, Field
+
+T = TypeVar("T")
+
+
+class ApiResponse(BaseModel, Generic[T]):
+    """
+    Envelope chuẩn cho mọi response thành công.
+    Frontend truy cập payload qua response.data.*
+    """
+
+    success: bool = True
+    data: T
 
 
 class DocumentResult(BaseModel):
