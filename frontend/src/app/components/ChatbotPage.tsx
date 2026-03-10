@@ -99,7 +99,15 @@ export function ChatbotPage() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || `Lỗi máy chủ (${response.status})`);
+        const detail = errorData.detail;
+        // FastAPI validation errors return detail as array of objects; others as string
+        const message =
+          typeof detail === "string"
+            ? detail
+            : Array.isArray(detail)
+              ? detail.map((e: { msg?: string }) => e.msg ?? JSON.stringify(e)).join("; ")
+              : `Lỗi máy chủ (${response.status})`;
+        throw new Error(message);
       }
 
       const json = await response.json();

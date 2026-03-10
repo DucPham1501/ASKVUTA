@@ -209,5 +209,6 @@ __marimo__/
 # Project-specific
 data/embeddings/*.pkl
 frontend/node_modules/
+frontend/.env
 .claude/
 *.log

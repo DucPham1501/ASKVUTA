@@ -115,11 +115,16 @@ class RagService:
             chunks=chunks,
         )
 
-        # Log prompt gửi cho LLM
-        user_msg = messages[-1]["content"] if messages else ""
-        logger.info(f"[RAG] Prompt gửi LLM ({len(user_msg)} ký tự):")
-        logger.info(f"  SYSTEM: {messages[0]['content'][:120]}…")
-        logger.info(f"  USER  : {user_msg[:300].replace(chr(10), ' ')}…")
+        # In FULL prompt ra stdout để debug RAG pipeline
+        system_msg = messages[0]["content"] if messages else ""
+        user_msg   = messages[-1]["content"] if messages else ""
+        print("\n" + "━" * 60)
+        print("【SYSTEM PROMPT】")
+        print(system_msg)
+        print("━" * 60)
+        print(f"【USER MESSAGE】  ({len(user_msg)} ký tự)")
+        print(user_msg)
+        print("━" * 60 + "\n")
 
         # ── Bước 4: LLM sinh câu trả lời ─────────────────────────────
         answer_text = llm_service.generate(messages)  # None nếu output là rác
