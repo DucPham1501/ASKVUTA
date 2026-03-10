@@ -1,0 +1,30 @@
+# ============================================================
+# Vũng Tàu RAG API – requirements.txt
+# ============================================================
+# Cài đặt:
+#   pip install -r requirements.txt
+#
+# Nếu dùng GPU (CUDA 12.x):
+#   pip install torch --index-url https://download.pytorch.org/whl/cu121
+# ============================================================
+
+# --- Web framework ---
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0          # ASGI server với WebSocket support
+pydantic>=2.7.0                    # Data validation
+pydantic-settings>=2.3.0           # Settings từ .env
+
+# --- FAISS vector search ---
+faiss-cpu>=1.8.0                   # CPU version (thay bằng faiss-gpu nếu có GPU)
+
+# --- Embedding model ---
+sentence-transformers>=3.0.0       # paraphrase-multilingual-mpnet-base-v2
+
+# --- LLM: Qwen2.5-0.5B-Instruct ---
+transformers>=4.44.0               # AutoTokenizer, AutoModelForCausalLM
+torch>=2.3.0                       # PyTorch (CPU)
+accelerate>=0.31.0                 # device_map, mixed precision
+
+# --- Utilities ---
+numpy>=1.26.0
+tiktoken>=0.7.0                    # Tokenizer (dùng trong build script)

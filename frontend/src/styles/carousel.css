@@ -1,0 +1,141 @@
+/* Slick Carousel Custom Styles */
+.slick-slider {
+  position: relative;
+  display: block;
+  box-sizing: border-box;
+  user-select: none;
+  touch-action: pan-y;
+}
+
+.slick-list {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+}
+
+.slick-track {
+  position: relative;
+  top: 0;
+  left: 0;
+  display: flex;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.slick-slide {
+  display: none;
+  float: left;
+  height: 100%;
+  min-height: 1px;
+}
+
+.slick-slide.slick-active {
+  display: block;
+}
+
+.slick-dots {
+  display: flex !important;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 2rem;
+  padding: 0;
+  list-style: none;
+}
+
+.slick-dots li button {
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: #cbd5e1;
+  cursor: pointer;
+  font-size: 0;
+  transition: all 0.3s ease;
+}
+
+.slick-dots li.slick-active button {
+  width: 30px;
+  border-radius: 5px;
+  background: linear-gradient(to right, #06b6d4, #0284c7);
+}
+
+.slick-dots li button:hover {
+  background: #94a3b8;
+}
+
+.slick-prev,
+.slick-next {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: linear-gradient(to right, #06b6d4, #0284c7);
+  color: white;
+  font-size: 0;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.slick-prev:hover,
+.slick-next:hover {
+  background: linear-gradient(to right, #0891b2, #0369a1);
+  box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+}
+
+.slick-prev {
+  left: -50px;
+}
+
+.slick-next {
+  right: -50px;
+}
+
+.slick-prev:before,
+.slick-next:before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 10px;
+  height: 10px;
+  border-top: 2px solid white;
+  border-right: 2px solid white;
+}
+
+.slick-prev:before {
+  transform: translate(-40%, -50%) rotate(-135deg);
+}
+
+.slick-next:before {
+  transform: translate(-60%, -50%) rotate(45deg);
+}
+
+@media (max-width: 1024px) {
+  .slick-prev {
+    left: 10px;
+  }
+
+  .slick-next {
+    right: 10px;
+  }
+}
+
+.news-carousel {
+  padding: 0 20px;
+}
+
+@media (max-width: 1024px) {
+  .news-carousel {
+    padding: 0 60px;
+  }
+}
