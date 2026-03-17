@@ -1,10 +1,8 @@
 """
 app/services/search_service.py
 --------------------------------
-SearchService – tìm kiếm tài liệu qua OpenRAG FaissRetriever.
-
-Nhận câu truy vấn tiếng Việt → gọi VectorStore.search() → chuẩn hóa
-kết quả thành DocumentResult để API route trả về.
+Document search via OpenRAG FaissRetriever.
+Wraps VectorStore.search() and normalizes results to DocumentResult objects.
 """
 
 import logging
@@ -16,59 +14,40 @@ logger = logging.getLogger(__name__)
 
 
 class SearchService:
-    """
-    Lớp dịch vụ tìm kiếm – bọc VectorStore.search() và chuẩn hóa output.
-
-    Tách biệt hoàn toàn khỏi routes; dễ unit-test và mở rộng
-    (ví dụ: thêm re-ranking, filter theo topic).
-    """
+    """Thin service layer over VectorStore.search() for use by routes and RagService."""
 
     def search(self, query: str, top_k: int | None = None) -> list[DocumentResult]:
         """
-        Tìm kiếm tài liệu liên quan đến câu truy vấn.
+        Search documents relevant to the query.
 
         Args:
-            query:  Từ khóa hoặc câu hỏi tiếng Việt.
-            top_k:  Số kết quả (mặc định: settings.SEARCH_TOP_K).
+            query:  Search text (Vietnamese).
+            top_k:  Number of results (default: settings.SEARCH_TOP_K).
 
         Returns:
-            list[DocumentResult] theo thứ tự score giảm dần.
+            list[DocumentResult] ordered by descending score.
         """
         k = top_k or settings.SEARCH_TOP_K
         logger.info(f"SearchService.search: query='{query}', top_k={k}")
+        return [self._to_result(r) for r in vector_store.search(query, top_k=k)]
 
-        # VectorStore.search() dùng FaissRetriever.index trực tiếp
-        raw = vector_store.search(query, top_k=k)
-        return [self._to_result(r) for r in raw]
-
-    def search_by_topic(
-        self, query: str, topic: str, top_k: int | None = None
-    ) -> list[DocumentResult]:
-        """
-        Tìm kiếm rồi lọc theo chủ đề.
-        Lấy nhiều hơn để bù cho phần bị lọc.
-        """
+    def search_by_topic(self, query: str, topic: str, top_k: int | None = None) -> list[DocumentResult]:
+        """Search then filter results by topic. Fetches 3× top_k to compensate for filtering."""
         k = top_k or settings.SEARCH_TOP_K
         raw = vector_store.search(query, top_k=k * 3)
-        topic_lower = topic.lower()
-        filtered = [r for r in raw if topic_lower in r.get("topic", "").lower()]
-        logger.info(
-            f"SearchService.search_by_topic: topic='{topic}', found={len(filtered)}"
-        )
+        filtered = [r for r in raw if topic.lower() in r.get("topic", "").lower()]
+        logger.info(f"SearchService.search_by_topic: topic='{topic}', found={len(filtered)}")
         return [self._to_result(r) for r in filtered[:k]]
-
-    # ------------------------------------------------------------------
 
     @staticmethod
     def _to_result(raw: dict) -> DocumentResult:
         return DocumentResult(
             chunk_id=raw.get("chunk_id", -1),
             text=raw.get("text", ""),
-            topic=raw.get("topic", "Không xác định"),
+            topic=raw.get("topic", "Unknown"),
             source=raw.get("source", "unknown"),
             score=raw.get("score", 0.0),
         )
 
 
-# Singleton
 search_service = SearchService()

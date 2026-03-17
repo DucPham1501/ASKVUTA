@@ -1,29 +1,20 @@
 """
 backend/app/core/vector_store.py
 ---------------------------------
-Tải và quản lý OpenRAG FaissRetriever từ file pickle.
+Singleton wrapper around OpenRAG's FaissRetriever.
 
-Lớp VectorStore bọc FaissRetriever của OpenRAG và cung cấp hai API:
+Pickle format produced by scripts/build_rag.py:
+  {
+    "retriever":           FaissRetriever  – FAISS index + context_chunks + embeddings
+    "metadata":            list[dict]      – {topic, source} parallel to context_chunks
+    "embedding_model":     str
+    "embedding_model_key": str             – key in Node.embeddings (e.g. "SBERT")
+    "num_chunks":          int
+  }
 
-  search(query, top_k)
-      → Trả về list[dict] gồm text + score + metadata (topic, source).
-      → Dùng cho GET /search – cần kết quả có điểm số riêng lẻ.
-      → Truy cập trực tiếp retriever.index (FAISS IndexFlatIP).
-
-  retrieve_context(query, top_k)
-      → Trả về str – văn bản context ghép nối các chunk phù hợp nhất.
-      → Dùng cho POST /chat – FaissRetriever.retrieve() là API native.
-
-Cấu trúc pickle (được tạo bởi scripts/build_rag.py):
-    {
-        "retriever":            FaissRetriever   – chứa index, context_chunks, embeddings
-        "metadata":             list[dict]       – {topic, source} song song với context_chunks
-        "embedding_model":      str
-        "embedding_model_key":  str              – key trong Node.embeddings ("SBERT")
-        "num_chunks":           int
-        "language":             "vi"
-        "topic":                str
-    }
+Public API:
+  search(query, top_k)          → list[dict]  – chunks with score + metadata
+  retrieve_context(query, top_k) → str        – joined context string for LLM prompt
 """
 
 import sys
@@ -34,17 +25,9 @@ from pathlib import Path
 
 import numpy as np
 
-# ---------------------------------------------------------------------------
-# Import chọn lọc từ OpenRAG qua loaders/openrag_loader (bỏ qua __init__.py).
-# Phải thực hiện TRƯỚC pickle.load() để class FaissRetriever được đăng ký đúng.
-# ---------------------------------------------------------------------------
 import sys as _sys
 import os as _os
 
-# Tính đường dẫn:
-#   __file__  = backend/app/core/vector_store.py
-#   _BACKEND  = backend/
-#   _ROOT     = project root  (chứa OpenRag/)
 _HERE    = _os.path.abspath(_os.path.dirname(__file__))
 _BACKEND = _os.path.abspath(_os.path.join(_HERE, "..", ".."))
 _ROOT    = _os.path.abspath(_os.path.join(_HERE, "..", "..", ".."))
@@ -54,7 +37,7 @@ for _p in (_BACKEND, _ROOT):
         _sys.path.insert(0, _p)
 
 from loaders.openrag_loader import setup_openrag                   # noqa: E402
-setup_openrag()                                                    # đăng ký các modules OpenRAG
+setup_openrag()
 
 from knowledge_base.raptor.FaissRetriever import FaissRetriever   # noqa: E402
 from app.core.config import settings                               # noqa: E402
@@ -63,84 +46,54 @@ logger = logging.getLogger(__name__)
 
 
 class VectorStore:
-    """
-    Singleton wrapper quanh OpenRAG's FaissRetriever.
-
-    Hai API chính:
-      search()           – tìm kiếm và trả về kết quả có điểm số (dùng cho /search)
-      retrieve_context() – trả về context string cho LLM (dùng cho /chat)
-    """
+    """Singleton wrapper around OpenRAG's FaissRetriever."""
 
     def __init__(self) -> None:
         self._retriever: FaissRetriever | None = None
-        self._metadata: list[dict] = []      # song song với _retriever.context_chunks
-        self._db_info: dict = {}             # thông tin phụ từ pickle
+        self._metadata: list[dict] = []   # parallel to _retriever.context_chunks
+        self._db_info: dict = {}
         self._is_loaded: bool = False
 
-    # ------------------------------------------------------------------
-    # Khởi tạo
-    # ------------------------------------------------------------------
-
     def load(self, pkl_path: str | None = None) -> None:
-        """
-        Tải FaissRetriever từ file pickle (do build_vungtau_rag.py tạo ra).
-        Gọi một lần khi ứng dụng khởi động (startup event trong main.py).
-        """
+        """Load FaissRetriever from pickle file. Call once at startup."""
         path = Path(pkl_path or settings.PKL_PATH)
         if not path.exists():
             raise FileNotFoundError(
-                f"Không tìm thấy vector store: {path}\n"
-                "Hãy chạy: python scripts/build_rag.py"
+                f"Vector store not found: {path}\n"
+                "Run: python scripts/build_rag.py"
             )
 
-        logger.info(f"Đang tải vector store từ: {path}")
+        logger.info(f"Loading vector store from: {path}")
         with open(path, "rb") as f:
             data = pickle.load(f)
 
-        # Hỗ trợ cả hai format pickle:
-        # - Format mới (build_vungtau_rag.py): có key "retriever"
-        # - Format cũ (custom FAISS dict): có key "index" + "chunks"
         if "retriever" in data and isinstance(data["retriever"], FaissRetriever):
             self._load_openrag_format(data)
         elif "index" in data and "chunks" in data:
             self._load_legacy_format(data)
         else:
-            raise ValueError(
-                "Định dạng pickle không được hỗ trợ. "
-                "Hãy chạy lại build_vungtau_rag.py để tạo file mới."
-            )
+            raise ValueError("Unsupported pickle format. Run scripts/build_rag.py to rebuild.")
 
         self._is_loaded = True
         logger.info(
-            f"Vector store sẵn sàng – {len(self._retriever.context_chunks):,} chunks, "
+            f"Vector store ready – {len(self._retriever.context_chunks):,} chunks, "
             f"dim={self._retriever.embeddings.shape[1]}"
         )
 
     def _load_openrag_format(self, data: dict) -> None:
-        """Tải format mới (OpenRAG FaissRetriever)."""
         self._retriever = data["retriever"]
         self._metadata  = data.get("metadata", [])
-        self._db_info   = {
-            k: v for k, v in data.items()
-            if k not in ("retriever", "metadata")
-        }
-        logger.info(
-            f"Format OpenRAG – model='{data.get('embedding_model', 'unknown')}', "
-            f"key='{data.get('embedding_model_key', 'SBERT')}'"
-        )
+        self._db_info   = {k: v for k, v in data.items() if k not in ("retriever", "metadata")}
+        logger.info(f"OpenRAG format – model='{data.get('embedding_model', 'unknown')}'")
 
     def _load_legacy_format(self, data: dict) -> None:
-        """
-        Tương thích ngược với format pickle cũ (custom FAISS dict).
-        Tái tạo FaissRetriever từ index + chunks + embeddings.
-        """
+        """Convert legacy FAISS dict format to FaissRetriever."""
         import faiss
         from knowledge_base.raptor.EmbeddingModels import SBertEmbeddingModel
 
-        logger.warning("Phát hiện format pickle cũ – đang chuyển đổi sang FaissRetriever…")
+        logger.warning("Legacy pickle format detected – converting to FaissRetriever...")
 
-        emb_model_name = data.get("embedding_model", settings.EMBEDDING_MODEL)
-        emb_model = SBertEmbeddingModel(emb_model_name)
+        emb_model = SBertEmbeddingModel(data.get("embedding_model", settings.EMBEDDING_MODEL))
 
         from knowledge_base.raptor.FaissRetriever import FaissRetrieverConfig
         config = FaissRetrieverConfig(
@@ -153,102 +106,66 @@ class VectorStore:
         )
         self._retriever = FaissRetriever(config)
 
-        # Gán trực tiếp các thuộc tính nội bộ từ dữ liệu cũ
-        chunks = data["chunks"]  # list[dict{text, topic, source, chunk_id}]
+        chunks = data["chunks"]
         self._retriever.context_chunks = [c["text"] for c in chunks]
         self._retriever.embeddings     = data["embeddings"].astype(np.float32)
         self._retriever.index          = data["index"]
-
         self._metadata = [
             {"topic": c.get("topic", ""), "source": Path(c.get("source", "")).name}
             for c in chunks
         ]
         self._db_info = {k: v for k, v in data.items() if k not in ("index", "chunks", "embeddings")}
-        logger.info("Chuyển đổi format cũ thành công.")
-
-    # ------------------------------------------------------------------
-    # API tìm kiếm – trả về kết quả có điểm số (dùng cho GET /search)
-    # ------------------------------------------------------------------
+        logger.info("Legacy format conversion successful.")
 
     def search(self, query: str, top_k: int = 5) -> list[dict]:
         """
-        Tìm kiếm top_k chunk phù hợp nhất, dùng đúng logic nội bộ của
-        OpenRAG FaissRetriever.retrieve():
-          1. Embed query bằng retriever.question_embedding_model  (giống retrieve())
-          2. Gọi retriever.index.search()                         (giống retrieve())
-          3. Lấy context_chunks theo indices                      (giống retrieve())
-          + Bổ sung: trả về score và metadata cho từng chunk
-
-        Args:
-            query:  Câu hỏi hoặc từ khóa tiếng Việt.
-            top_k:  Số chunk trả về (ghi đè retriever.top_k tạm thời).
+        Search top_k most relevant chunks using FAISS inner-product search.
 
         Returns:
-            list[dict] – mỗi dict chứa: text, topic, source, chunk_id, score.
+            list[dict] with keys: chunk_id, text, topic, source, score
         """
         self._ensure_loaded()
 
-        # ── Bước 1: embed query – giống retrieve() ──────────────────
-        query_emb = np.array(
-            [
-                np.array(
-                    self._retriever.question_embedding_model.create_embedding(query),
-                    dtype=np.float32,
-                ).squeeze()
-            ]
-        )  # shape (1, D)
+        query_emb = np.array([
+            np.array(
+                self._retriever.question_embedding_model.create_embedding(query),
+                dtype=np.float32,
+            ).squeeze()
+        ])
 
-        # ── Bước 2: FAISS search – giống retrieve() ─────────────────
         scores, indices = self._retriever.index.search(query_emb, top_k)
 
-        # ── Bước 3: lấy context_chunks theo indices – giống retrieve() ─
         results = []
         for score, idx in zip(scores[0], indices[0]):
-            if idx < 0:   # FAISS trả -1 khi không đủ kết quả
+            if idx < 0:  # FAISS returns -1 when fewer results than top_k exist
                 continue
             idx = int(idx)
             meta = self._metadata[idx] if idx < len(self._metadata) else {}
             results.append({
                 "chunk_id": idx,
                 "text":     self._retriever.context_chunks[idx],
-                "topic":    meta.get("topic", "Không xác định"),
+                "topic":    meta.get("topic", "Unknown"),
                 "source":   meta.get("source", "unknown"),
                 "score":    round(float(score), 4),
             })
 
         return results
 
-    # ------------------------------------------------------------------
-    # API truy xuất context – trả về string (dùng cho POST /chat)
-    # ------------------------------------------------------------------
-
     def retrieve_context(self, query: str, top_k: int = 5) -> str:
         """
-        Gọi FaissRetriever.retrieve() – API native của OpenRAG.
-        Trả về chuỗi văn bản context ghép nối các chunk phù hợp nhất.
-
-        FaissRetriever.retrieve() dùng self.top_k nên ta set tạm trước khi gọi.
-
-        Args:
-            query:  Câu hỏi tiếng Việt.
-            top_k:  Số chunk đưa vào context.
+        Call FaissRetriever.retrieve() (OpenRAG native API).
 
         Returns:
-            str – context text dùng để đưa vào prompt LLM.
+            Joined context string for use in LLM prompts.
         """
         self._ensure_loaded()
-        # FaissRetriever.retrieve() dùng self.top_k – set tạm thời
         original_k = self._retriever.top_k
         self._retriever.top_k = top_k
         try:
             context = self._retriever.retrieve(query)
         finally:
-            self._retriever.top_k = original_k   # khôi phục sau khi gọi xong
+            self._retriever.top_k = original_k
         return context
-
-    # ------------------------------------------------------------------
-    # Properties
-    # ------------------------------------------------------------------
 
     @property
     def is_loaded(self) -> bool:
@@ -260,7 +177,7 @@ class VectorStore:
 
     @property
     def info(self) -> dict:
-        """Thông tin metadata của vector store."""
+        """Return vector store metadata dict."""
         self._ensure_loaded()
         return {
             **self._db_info,
@@ -269,16 +186,9 @@ class VectorStore:
             "embedding_dim":    int(self._retriever.embeddings.shape[1]),
         }
 
-    # ------------------------------------------------------------------
-    # Nội bộ
-    # ------------------------------------------------------------------
-
     def _ensure_loaded(self) -> None:
         if not self._is_loaded:
-            raise RuntimeError(
-                "VectorStore chưa được tải. Gọi vector_store.load() trước."
-            )
+            raise RuntimeError("VectorStore not loaded. Call vector_store.load() first.")
 
 
-# Singleton – dùng chung toàn ứng dụng
 vector_store = VectorStore()

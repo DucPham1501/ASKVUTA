@@ -20,10 +20,11 @@ faiss-cpu>=1.8.0                   # CPU version (thay bằng faiss-gpu nếu c�
 # --- Embedding model ---
 sentence-transformers>=3.0.0       # paraphrase-multilingual-mpnet-base-v2
 
-# --- LLM: Qwen2.5-0.5B-Instruct ---
+# --- LLM: Arcee-VyLinh-3B (HuggingFace local) ---
 transformers>=4.44.0               # AutoTokenizer, AutoModelForCausalLM
-torch>=2.3.0                       # PyTorch (CPU)
+torch>=2.3.0                       # PyTorch (CPU/GPU)
 accelerate>=0.31.0                 # device_map, mixed precision
+bitsandbytes>=0.43.0               # 4-bit quantization (yêu cầu CUDA)
 
 # --- Utilities ---
 numpy>=1.26.0

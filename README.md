@@ -72,6 +72,6 @@ npm run dev
 
 ## Tech Stack
 
-- **Backend**: FastAPI + FAISS (OpenRAG) + Qwen2.5-0.5B-Instruct
+- **Backend**: FastAPI + FAISS (OpenRAG) + Arcee-VyLinh-3B
 - **Embeddings**: paraphrase-multilingual-mpnet-base-v2 (SentenceTransformers)
 - **Frontend**: React 18 + Vite + Tailwind CSS + Radix UI

@@ -1,73 +1,64 @@
 """
 backend/app/core/config.py
 --------------------------
-Cấu hình trung tâm của ứng dụng.
-Đọc các biến môi trường từ file .env (nếu có) hoặc từ môi trường hệ thống.
+Centralized application settings via pydantic-settings.
+Values are read from environment variables or the .env file.
+All settings have sensible defaults; only override in .env when needed.
 """
 
 import os as _os
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Tính project root dựa trên vị trí file này (backend/app/core/config.py)
-# backend/app/core/ → backend/app/ → backend/ → project root
+# Resolve project root from this file's location:
+# backend/app/core/config.py → backend/app/core/ → backend/app/ → backend/ → root
 _PROJECT_ROOT = _os.path.dirname(
     _os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
 )
 
 
 class Settings(BaseSettings):
-    """
-    Tất cả cài đặt của ứng dụng được định nghĩa tại đây.
-    Các giá trị có thể ghi đè qua biến môi trường hoặc file .env.
-    """
-
-    # --- Ứng dụng ---
+    # --- Application ---
     APP_NAME: str = "Vũng Tàu RAG API"
     APP_VERSION: str = "1.0.0"
-    APP_DESCRIPTION: str = (
-        "API tra cứu và hỏi đáp thông minh về thành phố Vũng Tàu, Việt Nam"
-    )
+    APP_DESCRIPTION: str = "Smart Q&A API about Vung Tau city, Vietnam"
     DEBUG: bool = False
 
+    # --- Server ---
+    PORT: int = 8000
+    BACKEND_URL: str = "http://localhost:8000"
+    # FRONTEND_URL: used for CORS.
+    #   "*"  → allow all origins (local dev).
+    #   URL  → restrict to specific domain (production).
+    FRONTEND_URL: str = "*"
+
     # --- Vector store ---
-    # Đường dẫn tuyệt đối đến file pickle chứa FAISS index
+    # Absolute path to the FAISS pickle file built by scripts/build_rag.py.
     PKL_PATH: str = _os.path.join(_PROJECT_ROOT, "data", "embeddings", "vungtau_knowledge.pkl")
 
-    # --- Embedding model (phải khớp với model dùng khi build index) ---
-    # Dùng như fallback khi VectorStore tải format pickle cũ
+    # --- Embedding model ---
+    # Must match the model used when building the FAISS index.
     EMBEDDING_MODEL: str = "paraphrase-multilingual-mpnet-base-v2"
 
-    # --- LLM: Qwen2.5-0.5B-Instruct (chạy local) ---
-    LLM_MODEL_ID: str = "Qwen/Qwen2.5-0.5B-Instruct"
-
-    # Số token tối đa mà LLM sinh ra
-    # Giữ thấp để tránh vòng lặp hallucination trên model 0.5B
-    LLM_MAX_NEW_TOKENS: int = 256
-
-    # Nhiệt độ sinh văn bản (thấp = chính xác hơn, tránh hallucination)
+    # --- LLM: Arcee-VyLinh-3B (HuggingFace local) ---
+    LLM_MODEL_ID: str = "arcee-ai/Arcee-VyLinh"
+    # Enable 4-bit quantization via bitsandbytes. Requires CUDA GPU (~1.5 GB VRAM).
+    LLM_LOAD_IN_4BIT: bool = False
+    LLM_MAX_NEW_TOKENS: int = 512
     LLM_TEMPERATURE: float = 0.2
-
-    # Top-p sampling
     LLM_TOP_P: float = 0.85
 
-    # --- Tìm kiếm ---
-    # Số lượng chunk trả về mặc định cho /search
-    SEARCH_TOP_K: int = 5
-
-    # Số lượng chunk dùng để xây dựng context cho RAG
-    # Giữ thấp: 3 chunk × 400 ký tự = ~1200 ký tự – vừa đủ cho Qwen-0.5B
-    RAG_TOP_K: int = 3
-
-    # Số ký tự tối đa mỗi chunk đưa vào context (cắt bớt nếu dài hơn)
-    MAX_CHUNK_CHARS: int = 400
+    # --- Search ---
+    SEARCH_TOP_K: int = 5    # default number of results for GET /search
+    RAG_TOP_K: int = 3       # number of chunks fed into RAG context
+    MAX_CHUNK_CHARS: int = 600  # max characters per chunk before truncation
 
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=True,
+        extra="ignore",
     )
 
 
-# Singleton – import và dùng ở mọi nơi trong dự án
 settings = Settings()
