@@ -2,7 +2,7 @@
 
 An intelligent Vietnamese RAG chatbot for discovering information about Vũng Tàu city.
 
-# OpenRag Integration
+## OpenRag Integration
 
 This project integrates OpenRag as the core framework for building the embedding and retrieval pipeline.
 - Utilized OpenRag for document ingestion, embedding generation, and indexing.
