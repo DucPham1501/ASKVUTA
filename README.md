@@ -2,6 +2,14 @@
 
 An intelligent Vietnamese RAG chatbot for discovering information about Vũng Tàu city.
 
+# OpenRag Integration
+
+This project integrates OpenRag as the core framework for building the embedding and retrieval pipeline.
+- Utilized OpenRag for document ingestion, embedding generation, and indexing.
+- Built a FAISS-based vector search system for efficient semantic retrieval.
+- Processed crawled Vietnamese articles into structured embeddings for downstream querying.
+- Enabled a modular and scalable RAG pipeline with support for flexible retrieval strategies and embedding models.
+- OpenRag repository: [![OpenRag](https://img.shields.io/badge/OpenRag-GitHub-blue)](https://github.com/incidentfox/OpenRag)
 ## Project Structure
 
 ```
@@ -37,17 +45,26 @@ ASKVUTA/
 pip install -r requirements.txt
 ```
 
-### 2. Crawl articles (optional – dataset already included)
+### 2. Clone OpenRag 
+```bash
+# Clone the repo
+git clone https://github.com/incidentfox/OpenRag.git
+cd OpenRag
+# Install requirements
+pip install -r requirements.txt
+```
+
+### 3. Crawl articles (optional – dataset already included)
 ```bash
 python backend/crawler/crawl_articles.py
 ```
 
-### 3. Build the RAG index
+### 4. Build the RAG index
 ```bash
 python scripts/build_rag.py
 ```
 
-### 4. Run the backend
+### 5. Run the backend
 ```bash
 python backend/app/main.py
 # or from backend/ directory:
