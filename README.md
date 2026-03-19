@@ -1,6 +1,8 @@
 # ASKVUTA
 
-An intelligent Vietnamese RAG chatbot for discovering information about Vũng Tàu city.
+a domain-specific Retrieval-Augmented Generation (RAG) chatbot designed to provide accurate and context-aware information about Vũng Tàu, Vietnam.
+
+The system combines web crawling, semantic indexing, and LLM-based reasoning to enable natural language question answering over a curated knowledge base.
 
 ## OpenRag Integration
 
@@ -10,33 +12,7 @@ This project integrates OpenRag as the core framework for building the embedding
 - Processed crawled Vietnamese articles into structured embeddings for downstream querying.
 - Enabled a modular and scalable RAG pipeline with support for flexible retrieval strategies and embedding models.
 - OpenRag repository: [![OpenRag](https://img.shields.io/badge/OpenRag-GitHub-blue)](https://github.com/incidentfox/OpenRag)
-## Project Structure
 
-```
-ASKVUTA/
-├── backend/
-│   ├── app/                    # FastAPI application
-│   │   ├── api/routes.py       # API endpoints (/health, /search, /chat)
-│   │   ├── core/               # Config & VectorStore
-│   │   ├── models/             # Pydantic request/response models
-│   │   ├── services/           # LLM, Search, RAG services
-│   │   └── utils/              # Prompt builder
-│   ├── crawler/                # Web scraper for Vũng Tàu articles
-│   └── loaders/                # OpenRAG selective import loader
-│
-├── frontend/                   # React + Vite + Tailwind UI
-│
-├── data/
-│   ├── dataset/                # Crawled JSON articles by topic
-│   └── embeddings/             # FAISS vector store (vungtau_knowledge.pkl)
-│
-├── scripts/
-│   └── build_rag.py            # Build FAISS index from dataset
-│
-├── OpenRag/                    # OpenRAG library (submodule)
-├── requirements.txt
-└── README.md
-```
 
 ## Quick Start
 
@@ -71,11 +47,39 @@ python backend/app/main.py
 uvicorn app.main:app --reload
 ```
 
-### 5. Run the frontend
+### 6. Run the frontend
 ```bash
 cd frontend
 npm install
 npm run dev
+```
+
+## Repository Structure 
+
+```
+ASKVUTA/
+├── backend/
+│   ├── app/                    # FastAPI application
+│   │   ├── api/routes.py       # API endpoints (/health, /search, /chat)
+│   │   ├── core/               # Config & VectorStore
+│   │   ├── models/             # Pydantic request/response models
+│   │   ├── services/           # LLM, Search, RAG services
+│   │   └── utils/              # Prompt builder
+│   ├── crawler/                # Web scraper for Vũng Tàu articles
+│   └── loaders/                # OpenRAG selective import loader
+│
+├── frontend/                   # React + Vite + Tailwind UI
+│
+├── data/
+│   ├── dataset/                # Crawled JSON articles by topic
+│   └── embeddings/             # FAISS vector store (vungtau_knowledge.pkl)
+│
+├── scripts/
+│   └── build_rag.py            # Build FAISS index from dataset
+│
+├── OpenRag/                    # OpenRAG library (submodule)
+├── requirements.txt
+└── README.md
 ```
 
 ## API Endpoints
