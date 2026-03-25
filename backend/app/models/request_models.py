@@ -13,8 +13,8 @@ class SearchRequest(BaseModel):
 
     query: str = Field(
         ...,
-        min_length=1,
-        max_length=500,
+        min_length=100,
+        max_length=1000,
         description="Search keyword or question (Vietnamese)",
         examples=["bãi biển đẹp Vũng Tàu"],
     )
