@@ -56,7 +56,7 @@ async def get_info() -> JSONResponse:
 
 @router.get("/search", response_model=SearchResponse, tags=["Search"])
 async def search_documents(
-    query: Annotated[str, Query(min_length=1, max_length=500, description="Search query (Vietnamese)")],
+    query: Annotated[str, Query(min_length=100, max_length=1000, description="Search query (Vietnamese)")],
     top_k: Annotated[int, Query(ge=1, le=20, description="Number of results (1–20)")] = 5,
 ) -> SearchResponse:
     """Search documents most relevant to the query using FAISS inner-product search."""
