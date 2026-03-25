@@ -22,8 +22,15 @@ import os
 import pickle
 import logging
 from pathlib import Path
-
 import numpy as np
+
+from loaders.openrag_loader import setup_openrag                   
+setup_openrag()
+import faiss
+from knowledge_base.raptor.EmbeddingModels import SBertEmbeddingModel
+from knowledge_base.raptor.FaissRetriever import FaissRetriever   
+from knowledge_base.raptor.FaissRetriever import FaissRetrieverConfig
+from app.core.config import settings                              
 
 import sys as _sys
 import os as _os
@@ -36,11 +43,6 @@ for _p in (_BACKEND, _ROOT):
     if _p not in _sys.path:
         _sys.path.insert(0, _p)
 
-from loaders.openrag_loader import setup_openrag                   # noqa: E402
-setup_openrag()
-
-from knowledge_base.raptor.FaissRetriever import FaissRetriever   # noqa: E402
-from app.core.config import settings                               # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -88,14 +90,9 @@ class VectorStore:
 
     def _load_legacy_format(self, data: dict) -> None:
         """Convert legacy FAISS dict format to FaissRetriever."""
-        import faiss
-        from knowledge_base.raptor.EmbeddingModels import SBertEmbeddingModel
-
         logger.warning("Legacy pickle format detected – converting to FaissRetriever...")
 
         emb_model = SBertEmbeddingModel(data.get("embedding_model", settings.EMBEDDING_MODEL))
-
-        from knowledge_base.raptor.FaissRetriever import FaissRetrieverConfig
         config = FaissRetrieverConfig(
             max_tokens=data.get("chunk_size", 500),
             use_top_k=True,
