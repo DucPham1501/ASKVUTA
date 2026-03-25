@@ -18,37 +18,32 @@ _PROJECT_ROOT = _os.path.dirname(
 
 
 class Settings(BaseSettings):
-    # --- Application ---
+    # Application 
     APP_NAME: str = "Vũng Tàu RAG API"
     APP_VERSION: str = "1.0.0"
     APP_DESCRIPTION: str = "Smart Q&A API about Vung Tau city, Vietnam"
     DEBUG: bool = False
 
-    # --- Server ---
+    #Server 
     PORT: int = 8000
     BACKEND_URL: str = "http://localhost:8000"
     # FRONTEND_URL: used for CORS.
     #   "*"  → allow all origins (local dev).
-    #   URL  → restrict to specific domain (production).
     FRONTEND_URL: str = "*"
 
-    # --- Vector store ---
-    # Absolute path to the FAISS pickle file built by scripts/build_rag.py.
+    #Vector store
     PKL_PATH: str = _os.path.join(_PROJECT_ROOT, "data", "embeddings", "vungtau_knowledge.pkl")
-
-    # --- Embedding model ---
-    # Must match the model used when building the FAISS index.
+    # Embedding model
     EMBEDDING_MODEL: str = "paraphrase-multilingual-mpnet-base-v2"
 
-    # --- LLM: Arcee-VyLinh-3B (HuggingFace local) ---
+    # LLM 
     LLM_MODEL_ID: str = "arcee-ai/Arcee-VyLinh"
-    # Enable 4-bit quantization via bitsandbytes. Requires CUDA GPU (~1.5 GB VRAM).
     LLM_LOAD_IN_4BIT: bool = False
     LLM_MAX_NEW_TOKENS: int = 512
     LLM_TEMPERATURE: float = 0.2
     LLM_TOP_P: float = 0.85
 
-    # --- Search ---
+    # Search 
     SEARCH_TOP_K: int = 5    # default number of results for GET /search
     RAG_TOP_K: int = 3       # number of chunks fed into RAG context
     MAX_CHUNK_CHARS: int = 600  # max characters per chunk before truncation
