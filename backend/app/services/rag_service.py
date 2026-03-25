@@ -25,7 +25,7 @@ from app.models.response_models import ChatResponse, DocumentResult
 
 logger = logging.getLogger(__name__)
 
-RELEVANCE_THRESHOLD = 1.5
+RELEVANCE_THRESHOLD = 3.0
 
 _UNWANTED_OPENINGS = re.compile(
     r"^(theo\s+(cơ sở dữ liệu|tài liệu|thông tin|context)|"
@@ -54,8 +54,8 @@ def _direct_answer(chunks: list[dict]) -> str:
             continue
         sentences = re.split(r"(?<=[.!?])\s+", text)
         answer = " ".join(sentences[:3]).strip()
-        if len(answer) > 400:
-            answer = answer[:400].rsplit(" ", 1)[0] + "…"
+        if len(answer) > 1000:
+            answer = answer[:1000].rsplit(" ", 1)[0] + " "
         return answer
     return "Tôi không có thông tin về vấn đề này."
 
