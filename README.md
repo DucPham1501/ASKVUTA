@@ -6,6 +6,14 @@ What makes AskVuta stand out is its core integration with **OpenRAG** — an ope
 
 ---
 
+## Chat Interface
+
+<p align="center">
+  <img src="assets/chat-demo.png" alt="AskVuta Chat Interface"/>
+</p>
+
+---
+
 ## Features
 
 - **Automated web crawler** collecting Vung Tau articles by topic (tourism, cuisine, history, economy)
@@ -20,53 +28,53 @@ What makes AskVuta stand out is its core integration with **OpenRAG** — an ope
 ## System Architecture
 
 ```
-┌────────────────────────────────────────────────────────────┐
-│                      DATA PIPELINE                         │
-│                                                            │
-│  backend/crawler/crawl_articles.py                         │
-│   └─ Crawl JSON articles by topic                          │
-│       ├── tourism/    ├── cuisine/                         │
-│       ├── history/    └── economy/                         │
-│                       (data/dataset/)                      │
-│                                                            │
-│  scripts/build_rag.py                                      │
-│   └─ OpenRAG ingestion → FAISS index                       │
-│       → data/embeddings/vungtau_knowledge.pkl              │
-└────────────────────────────────────────────────────────────┘
-                           │
-                           ▼
-┌────────────────────────────────────────────────────────────┐
-│                    OPENRAG ENGINE                          │
-│                                                            │
-│  Parallel retrieval strategies:                            │
-│   ├── RAPTOR hierarchical tree search                      │
-│   ├── BM25 hybrid (sparse + dense fusion via RRF)          │
-│   └── HyDE query expansion                                 │
-│                                                            │
-│  ──► Result fusion & dedup → top-20 candidates             │
-│  ──► Cohere Neural Reranker → top-5 final                  │
-└────────────────────────────────────────────────────────────┘
-                           │
-                           ▼
-┌────────────────────────────────────────────────────────────┐
-│                   BACKEND (FastAPI)                        │
-│                                                            │
-│  backend/app/                                              │
-│   ├── api/routes.py    → GET /search, POST /chat           │
-│   ├── services/        → LLM, RAG, Search services         │
-│   ├── core/            → VectorStore, Config               │
-│   └── utils/           → Prompt builder                    │
-│                                                            │
-│  LLM: Arcee-VyLinh-3B                                      │
-└────────────────────────────────────────────────────────────┘
-                           │
-                           ▼
-┌────────────────────────────────────────────────────────────┐
-│                   FRONTEND (React)                         │
-│                                                            │
-│  frontend/ – React 18 + Vite + Tailwind CSS + Radix UI     │
-│   └─ Chat UI → POST /chat → display answer                 │
-└────────────────────────────────────────────────────────────┘
+     DATA PREPARATION                  QUESTION ANSWERING
+──────────────────────────        ───────────────────────────────
+
+┌────────────────────┐
+│   Crawl Sources    │
+└─────────┬──────────┘
+          │
+          ▼
+┌────────────────────┐
+│    Process Data    │
+│ (Chunk + RAPTOR)   │
+└─────────┬──────────┘
+          │
+          ▼
+┌────────────────────┐
+│    Build Index     │
+│ (Vector + BM25)    │
+└─────────┬──────────┘
+          │
+          ▼
+┌────────────────────┐
+│   Knowledge Base   │──────────────────────────────┐
+└────────────────────┘                              │
+                                                    ▼
+                                         ┌────────────────────┐
+                                         │     User Query     │
+                                         └─────────┬──────────┘
+                                                   │
+                                                   ▼
+                                         ┌────────────────────┐
+                                         │   Hybrid Search    │
+                                         └─────────┬──────────┘
+                                                   │
+                                                   ▼
+                                         ┌────────────────────┐
+                                         │      Rerank        │
+                                         └─────────┬──────────┘
+                                                   │
+                                                   ▼
+                                         ┌────────────────────┐
+                                         │        LLM         │
+                                         └─────────┬──────────┘
+                                                   │
+                                                   ▼
+                                         ┌────────────────────┐
+                                         │       Answer       │
+                                         └────────────────────┘
 ```
 
 ---
@@ -194,7 +202,7 @@ ASKVUTA/
 ├── scripts/
 │   └── build_rag.py            # Build FAISS index from dataset
 │
-├── OpenRag/                    # OpenRAG library (submodule)
+├── OpenRag/                    # OpenRAG library 
 ├── requirements.txt
 └── README.md
 ```
