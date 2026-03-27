@@ -25,7 +25,7 @@ What makes AskVuta stand out is its core integration with **OpenRAG** — an ope
 
 ---
 
-## System Architecture
+## System Flow
 
 ```
 DATA PREPARATION                    QUESTION ANSWERING
@@ -86,6 +86,7 @@ DATA PREPARATION                    QUESTION ANSWERING
                                             ┌────────────────────┐
                                             │     Final Answer   │
                                             └────────────────────┘
+```
 ---
 
 ## What Makes AskVuta Powerful: The OpenRAG Trio
