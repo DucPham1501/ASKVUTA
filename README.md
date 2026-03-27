@@ -28,8 +28,8 @@ What makes AskVuta stand out is its core integration with **OpenRAG** — an ope
 ## System Architecture
 
 ```
-     DATA PREPARATION                  QUESTION ANSWERING
-──────────────────────────        ───────────────────────────────
+DATA PREPARATION                    QUESTION ANSWERING
+──────────────────────────         ──────────────────────────────
 
 ┌────────────────────┐
 │   Crawl Sources    │
@@ -37,7 +37,7 @@ What makes AskVuta stand out is its core integration with **OpenRAG** — an ope
           │
           ▼
 ┌────────────────────┐
-│    Process Data    │
+│   Process Data     │
 │ (Chunk + RAPTOR)   │
 └─────────┬──────────┘
           │
@@ -49,37 +49,46 @@ What makes AskVuta stand out is its core integration with **OpenRAG** — an ope
           │
           ▼
 ┌────────────────────┐
-│   Knowledge Base   │──────────────────────────────┐
-└────────────────────┘                              │
-                                                    ▼
-                                         ┌────────────────────┐
-                                         │     User Query     │
-                                         └─────────┬──────────┘
-                                                   │
-                                                   ▼
-                                         ┌────────────────────┐
-                                         │   Hybrid Search    │
-                                         └─────────┬──────────┘
-                                                   │
-                                                   ▼
-                                         ┌────────────────────┐
-                                         │      Rerank        │
-                                         └─────────┬──────────┘
-                                                   │
-                                                   ▼
-                                         ┌────────────────────┐
-                                         │        LLM         │
-                                         └─────────┬──────────┘
-                                                   │
-                                                   ▼
-                                         ┌────────────────────┐
-                                         │       Answer       │
-                                         └────────────────────┘
-```
-
+│   Knowledge Base   │─────────────────────────────────┐
+└────────────────────┘                                 │
+                                                       ▼
+                                            ┌────────────────────┐
+                                            │     User Query     │
+                                            └─────────┬──────────┘
+                                                      │
+                                                      ▼
+                                            ┌────────────────────┐
+                                            │   Hybrid Search    │
+                                            │  (FAISS + BM25)    │
+                                            └─────────┬──────────┘
+                                                      │
+                                                      ▼
+                                            ┌────────────────────┐
+                                            │ Relevance Check    │
+                                            │  score ≥ 0.6 ?     │
+                                            └──┬─────────────────┘
+                                    No (OOS)   │         │ Yes
+                               ┌───────────────┘         │
+                               ▼                         ▼
+                    ┌─────────────────┐       ┌────────────────────┐
+                    │  Reject Answer  │       │  Neural Reranker   │
+                    │ (out of scope)  │       │   (CrossEncoder)   │
+                    └─────────────────┘       └─────────┬──────────┘
+                                                        │
+                                                        ▼
+                                            ┌────────────────────┐
+                                            │        LLM         │
+                                            │  (Arcee-VyLinh-3B) │
+                                            └────────────────────┘
+                                                        │ 
+                                                        │
+                                                        ▼
+                                            ┌────────────────────┐
+                                            │     Final Answer   │
+                                            └────────────────────┘
 ---
 
-## 🚀 What Makes AskVuta Powerful: The OpenRAG Trio
+## What Makes AskVuta Powerful: The OpenRAG Trio
 
 AskVuta's retrieval quality is backed by **[OpenRAG](https://github.com/incidentfox/OpenRag)**, validated across thousands of queries:
 
@@ -93,7 +102,7 @@ AskVuta's retrieval quality is backed by **[OpenRAG](https://github.com/incident
 
 ---
 
-### 🌲 1. RAPTOR – Hierarchical Tree Retrieval
+### 1. RAPTOR – Hierarchical Tree Retrieval
 
 **RAPTOR** (Recursive Abstractive Processing for Tree-Organized Retrieval) organizes documents into a recursive tree rather than treating them as a flat list of chunks like traditional RAG.
 
@@ -108,7 +117,7 @@ AskVuta's retrieval quality is backed by **[OpenRAG](https://github.com/incident
 
 ---
 
-### 🔀 2. BM25 Hybrid Search
+### 2. BM25 Hybrid Search
 
 Combines two complementary retrieval methods, merged via **Reciprocal Rank Fusion (RRF)**:
 
@@ -122,7 +131,7 @@ Combines two complementary retrieval methods, merged via **Reciprocal Rank Fusio
 
 ---
 
-### 🎯 3. Neural Reranking
+### 3. Neural Reranking
 
 After retrieval returns ~20 candidates, **Cohere `rerank-english-v3.0`** (or `BAAI/bge-reranker-base` for local inference) reads each *(query, document)* pair jointly to produce a more accurate relevance score.
 
