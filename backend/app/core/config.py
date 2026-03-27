@@ -1,6 +1,4 @@
 """
-backend/app/core/config.py
---------------------------
 Centralized application settings via pydantic-settings.
 Values are read from environment variables or the .env file.
 All settings have sensible defaults; only override in .env when needed.
@@ -43,10 +41,11 @@ class Settings(BaseSettings):
     LLM_TEMPERATURE: float = 0.2
     LLM_TOP_P: float = 0.85
 
-    # Search 
+    # Search
     SEARCH_TOP_K: int = 5    # default number of results for GET /search
     RAG_TOP_K: int = 3       # number of chunks fed into RAG context
     MAX_CHUNK_CHARS: int = 600  # max characters per chunk before truncation
+    RELEVANCE_THRESHOLD: float = 0.6  # min cosine similarity to consider a chunk relevant
 
     model_config = SettingsConfigDict(
         env_file=".env",
