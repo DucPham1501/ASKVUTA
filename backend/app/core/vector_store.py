@@ -1,6 +1,4 @@
 """
-backend/app/core/vector_store.py
----------------------------------
 Singleton wrapper around OpenRAG's FaissRetriever.
 
 Pickle format produced by scripts/build_rag.py:
@@ -17,34 +15,30 @@ Public API:
   retrieve_context(query, top_k) → str        – joined context string for LLM prompt
 """
 
-import sys
-import os
-import pickle
 import logging
+import pickle
 from pathlib import Path
+
+import faiss
 import numpy as np
 
-from loaders.openrag_loader import setup_openrag                   
+from loaders.openrag_loader import setup_openrag
+
 setup_openrag()
-import faiss
+
 from knowledge_base.raptor.EmbeddingModels import SBertEmbeddingModel
-from knowledge_base.raptor.FaissRetriever import FaissRetriever   
-from knowledge_base.raptor.FaissRetriever import FaissRetrieverConfig
-from app.core.config import settings                              
+from knowledge_base.raptor.FaissRetriever import FaissRetriever, FaissRetrieverConfig
 
-import sys as _sys
-import os as _os
-
-_HERE    = _os.path.abspath(_os.path.dirname(__file__))
-_BACKEND = _os.path.abspath(_os.path.join(_HERE, "..", ".."))
-_ROOT    = _os.path.abspath(_os.path.join(_HERE, "..", "..", ".."))
-
-for _p in (_BACKEND, _ROOT):
-    if _p not in _sys.path:
-        _sys.path.insert(0, _p)
-
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+
+
+def _normalize(matrix: np.ndarray) -> np.ndarray:
+    """L2-normalize rows of a 2-D array in-place (safe against zero-norm rows)."""
+    norms = np.linalg.norm(matrix, axis=1, keepdims=True)
+    norms = np.where(norms == 0, 1.0, norms)
+    return matrix / norms
 
 
 class VectorStore:
@@ -129,6 +123,7 @@ class VectorStore:
                 dtype=np.float32,
             ).squeeze()
         ])
+        query_emb = _normalize(query_emb)  # L2-normalize → cosine similarity via IndexFlatIP
 
         scores, indices = self._retriever.index.search(query_emb, top_k)
 
@@ -164,9 +159,30 @@ class VectorStore:
             self._retriever.top_k = original_k
         return context
 
+    def get_chunks_by_ids(self, chunk_ids: list[int]) -> list[dict]:
+        """Fetch chunks by their index positions (for BM25/HyDE result lookup)."""
+        self._ensure_loaded()
+        results = []
+        for idx in chunk_ids:
+            if 0 <= idx < len(self._retriever.context_chunks):
+                meta = self._metadata[idx] if idx < len(self._metadata) else {}
+                results.append({
+                    "chunk_id": idx,
+                    "text":     self._retriever.context_chunks[idx],
+                    "topic":    meta.get("topic", "Unknown"),
+                    "source":   meta.get("source", "unknown"),
+                    "score":    0.0,
+                })
+        return results
+
     @property
     def is_loaded(self) -> bool:
         return self._is_loaded
+
+    @property
+    def chunks(self) -> list[str]:
+        """All chunk texts (used to build BM25 index at startup)."""
+        return list(self._retriever.context_chunks) if self._is_loaded else []
 
     @property
     def num_chunks(self) -> int:
